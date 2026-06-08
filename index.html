@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a1628">
+  <meta name="description" content="Sistema de presença em eventos acadêmicos via QR Code">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="EventCheck">
+  
+  <title>EventCheck — Presença em Eventos</title>
+  
+  <link rel="manifest" href="./manifest.json">
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%230a1628'/%3E%3Crect x='30' y='30' width='52' height='52' rx='6' fill='%231565c0'/%3E%3Crect x='110' y='30' width='52' height='52' rx='6' fill='%231565c0'/%3E%3Crect x='30' y='110' width='52' height='52' rx='6' fill='%231565c0'/%3E%3Ccircle cx='136' cy='136' r='30' fill='none' stroke='%2300e676' stroke-width='6'/%3E%3Cpath d='M121 136l10 10 20-20' fill='none' stroke='%2300e676' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  
+  <!-- External Libraries -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+  <!-- Login Screen -->
+  <div id="login-screen">
+    <div class="login-card">
+      <div class="login-logo">🎓</div>
+      <h1>EventCheck</h1>
+      <p class="subtitle">Sistema de presença em eventos acadêmicos</p>
+      
+      <div class="login-input-group">
+        <span class="input-icon">🔒</span>
+        <input type="password" id="password-input" placeholder="Digite a senha de acesso" autocomplete="current-password">
+      </div>
+      
+      <p class="login-error" id="login-error">Senha incorreta. Tente novamente.</p>
+      
+      <button class="btn btn-primary" id="login-btn">
+        <span>Entrar</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="app" class="hidden">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="header-logo">🎓</div>
+        <div class="header-info">
+          <h2 id="header-event-name">EventCheck</h2>
+          <div class="event-status">
+            <span class="status-dot" id="status-dot"></span>
+            <span id="status-text">Desconectado</span>
+          </div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-icon btn-secondary" id="refresh-btn" title="Atualizar dados">🔄</button>
+        <button class="btn btn-icon btn-secondary" id="logout-btn" title="Sair">🚪</button>
+      </div>
+    </header>
+
+    <!-- Dashboard Section -->
+    <section id="dashboard-section" class="section active">
+      <h3 class="section-title">Dashboard</h3>
+      
+      <div class="stats-grid">
+        <div class="stat-card total">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value" id="stat-total">—</div>
+          <div class="stat-label">Total</div>
+        </div>
+        <div class="stat-card present">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" id="stat-present">—</div>
+          <div class="stat-label">Presentes</div>
+        </div>
+        <div class="stat-card absent">
+          <div class="stat-icon">❌</div>
+          <div class="stat-value" id="stat-absent">—</div>
+          <div class="stat-label">Ausentes</div>
+        </div>
+        <div class="stat-card percentage">
+          <div class="stat-icon">📊</div>
+          <div class="stat-value" id="stat-percentage">—</div>
+          <div class="stat-label">Presença</div>
+        </div>
+      </div>
+
+      <div class="recent-section">
+        <div class="recent-header">
+          <h3>Check-ins recentes</h3>
+          <span class="recent-count" id="recent-count">0 hoje</span>
+        </div>
+        <div class="recent-list" id="recent-list">
+          <div class="empty-state" id="empty-recent">
+            <div class="empty-icon">📭</div>
+            <p>Nenhum check-in ainda.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scanner Section -->
+    <section id="scanner-section" class="section">
+      <h3 class="section-title">Scanner de presença</h3>
+      
+      <div class="scanner-wrapper">
+        <div class="scanner-viewport" id="scanner-viewport">
+          <div id="scanner-view"></div>
+          <div class="scanner-corners">
+            <div class="corner-bl"></div>
+            <div class="corner-br"></div>
+          </div>
+          <div class="scanner-laser"></div>
+        </div>
+        
+        <div class="scanner-placeholder" id="scanner-placeholder">
+          <p style="text-align: center; color: var(--text-secondary); padding: 20px;">
+            📷 Inicie a câmera para ler QR Codes.
+          </p>
+        </div>
+        
+        <div class="scanner-controls">
+          <button class="btn btn-primary" id="start-scan-btn">
+            <span>📷</span>
+            <span>Iniciar scanner</span>
+          </button>
+          <button class="btn btn-danger hidden" id="stop-scan-btn">
+            <span>⏹️</span>
+            <span>Parar</span>
+          </button>
+          <label class="btn btn-secondary" style="cursor: pointer;">
+            <span>📁</span>
+            <span>Enviar imagem</span>
+            <input type="file" id="qr-file-input" accept="image/*" style="display: none;">
+          </label>
+        </div>
+        
+        <p class="scanner-tip">
+          💡 <strong>Dica:</strong> Mantenha uma distância de 20 a 30cm e centralize o QR Code na tela para uma leitura instantânea.
+        </p>
+      </div>
+
+      <!-- Scan Result Overlay -->
+      <div class="scan-result" id="scan-result">
+        <div class="result-icon" id="result-icon"></div>
+        <div class="result-info">
+          <div class="result-name" id="result-name"></div>
+          <div class="result-message" id="result-message"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- QR Codes Section -->
+    <section id="qr-section" class="section">
+      <h3 class="section-title">QR Codes</h3>
+      
+      <div class="qr-toolbar">
+        <button class="btn btn-primary" id="load-qr-btn">
+          <span>📥</span>
+          <span>Carregar da planilha</span>
+        </button>
+        <button class="btn btn-secondary" id="print-qr-btn">
+          <span>🖨️</span>
+          <span>Imprimir</span>
+        </button>
+      </div>
+
+      <div class="qr-search">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="qr-search-input" placeholder="Buscar participante...">
+      </div>
+
+      <div class="qr-grid" id="qr-grid">
+        <div class="empty-state" id="empty-qr">
+          <div class="empty-icon">📱</div>
+          <p>Carregue os participantes para gerar os QR Codes.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Config Section -->
+    <section id="config-section" class="section">
+      <h3 class="section-title">Configurações</h3>
+      
+      <div class="config-form">
+        <div class="input-group">
+          <label for="config-event-name">Nome do evento</label>
+          <input type="text" id="config-event-name" placeholder="Ex: Semana Acadêmica 2024">
+        </div>
+
+        <div class="input-group">
+          <label for="config-script-url">URL do Google Apps Script</label>
+          <input type="url" id="config-script-url" placeholder="https://script.google.com/macros/s/...">
+          <p class="input-hint">Cole a URL de implantação do seu Apps Script aqui.</p>
+        </div>
+
+        <div class="config-actions">
+          <button class="btn btn-primary" id="save-config-btn">
+            <span>💾</span>
+            <span>Salvar configurações</span>
+          </button>
+          <button class="btn btn-secondary" id="test-connection-btn">
+            <span>🔗</span>
+            <span>Testar conexão</span>
+          </button>
+        </div>
+
+        <div class="connection-status hidden" id="connection-status">
+          <span id="connection-icon"></span>
+          <span id="connection-text"></span>
+        </div>
+
+        <hr class="config-divider">
+
+        <div class="config-actions">
+          <button class="btn btn-secondary" id="generate-ids-btn">
+            <span>🔑</span>
+            <span>Gerar IDs para Participantes sem ID</span>
+          </button>
+          <button class="btn btn-danger" id="clear-data-btn">
+            <span>🗑️</span>
+            <span>Limpar dados locais</span>
+          </button>
+        </div>
+
+        <div class="input-group">
+          <label>Formato da planilha</label>
+          <p class="input-hint">Nome | Email | Instituição | ID_Unico | Status | Data_Checkin</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav" id="bottom-nav">
+      <button class="nav-item active" data-section="dashboard">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Dashboard</span>
+      </button>
+      <button class="nav-item" data-section="scanner">
+        <span class="nav-icon">📷</span>
+        <span class="nav-label">Scanner</span>
+      </button>
+      <button class="nav-item" data-section="qr">
+        <span class="nav-icon">📱</span>
+        <span class="nav-label">QR Codes</span>
+      </button>
+      <button class="nav-item" data-section="config">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label">Config</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- QR Code Modal -->
+  <div class="modal-backdrop hidden" id="qr-modal">
+    <div class="modal-content">
+      <h3 id="modal-name">Nome do Participante</h3>
+      <p class="modal-subtitle" id="modal-email">email@exemplo.com</p>
+      <div class="modal-qr" id="modal-qr-container"></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="modal-download-btn">
+          <span>⬇️</span>
+          <span>Baixar JPG</span>
+        </button>
+        <button class="btn btn-secondary" id="modal-close-btn">
+          <span>✖️</span>
+          <span>Fechar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay hidden" id="loading-overlay">
+    <div class="loading-spinner"></div>
+    <p class="loading-text" id="loading-text">Carregando...</p>
+  </div>
+
+  <!-- Main App Script -->
+  <script src="./app.js"></script>
+</body>
+</html>

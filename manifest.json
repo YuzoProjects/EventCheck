@@ -1,0 +1,29 @@
+{
+  "name": "EventCheck - Presença em Eventos",
+  "short_name": "EventCheck",
+  "description": "Sistema de presença em eventos acadêmicos via QR Code",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#060d1f",
+  "theme_color": "#0a1628",
+  "orientation": "portrait",
+  "lang": "pt-BR",
+  "categories": [
+    "productivity",
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%230a1628'/%3E%3Crect x='30' y='30' width='52' height='52' rx='6' fill='%231565c0'/%3E%3Crect x='110' y='30' width='52' height='52' rx='6' fill='%231565c0'/%3E%3Crect x='30' y='110' width='52' height='52' rx='6' fill='%231565c0'/%3E%3Ccircle cx='136' cy='136' r='30' fill='none' stroke='%2300e676' stroke-width='6'/%3E%3Cpath d='M121 136l10 10 20-20' fill='none' stroke='%2300e676' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230a1628'/%3E%3Crect x='80' y='80' width='140' height='140' rx='16' fill='%231565c0'/%3E%3Crect x='292' y='80' width='140' height='140' rx='16' fill='%231565c0'/%3E%3Crect x='80' y='292' width='140' height='140' rx='16' fill='%231565c0'/%3E%3Ccircle cx='362' cy='362' r='80' fill='none' stroke='%2300e676' stroke-width='14'/%3E%3Cpath d='M322 362l28 28 52-52' fill='none' stroke='%2300e676' stroke-width='14' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
