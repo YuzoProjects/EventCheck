@@ -39,7 +39,6 @@ const dom = {
   statusDot: $('#status-dot'),
   statusText: $('#status-text'),
   refreshBtn: $('#refresh-btn'),
-  logoutBtn: $('#logout-btn'),
   statTotal: $('#stat-total'),
   statPresent: $('#stat-present'),
   statAbsent: $('#stat-absent'),
@@ -120,7 +119,6 @@ function registerServiceWorker() {
 function bindEvents() {
   dom.navItems.forEach(item => item.addEventListener('click', () => navigateTo(item.dataset.section)));
   dom.refreshBtn.addEventListener('click', refreshData);
-  dom.logoutBtn.addEventListener('click', handleLogout);
   dom.startScanBtn.addEventListener('click', startScanner);
   dom.stopScanBtn.addEventListener('click', stopScanner);
   dom.qrFileInput.addEventListener('change', handleFileUpload);
@@ -136,18 +134,6 @@ function bindEvents() {
   dom.qrModal.addEventListener('click', (e) => { if (e.target === dom.qrModal) closeModal(); });
 }
 
-// ============================================
-// AUTHENTICATION (REMOVED - NO LOGIN REQUIRED)
-// ============================================
-function handleLogout() {
-  // Clear local data and redirect to config for fresh setup
-  if (confirm('Deseja limpar as configurações locais e desconectar?')) {
-    localStorage.removeItem(STORAGE_KEYS.scriptUrl);
-    localStorage.removeItem(STORAGE_KEYS.eventName);
-    localStorage.removeItem(STORAGE_KEYS.recentCheckins);
-    localStorage.removeItem(STORAGE_KEYS.participants);
-    window.location.reload();
-  }
 }
 
 // ============================================
@@ -473,9 +459,25 @@ function closeModal() { dom.qrModal.classList.add('hidden'); }
 function downloadModalQR() {
   const canvas = dom.modalQrContainer.querySelector('canvas');
   if (!canvas) { showToast('QR Code não disponível', 'error'); return; }
+  
+  // Cria um canvas limpo apenas com o QR Code (fundo branco puro)
+  const cleanCanvas = document.createElement('canvas');
+  cleanCanvas.width = 280;
+  cleanCanvas.height = 280;
+  const ctx = cleanCanvas.getContext('2d');
+  
+  // Fundo branco sólido
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, cleanCanvas.width, cleanCanvas.height);
+  
+  // Desenha o QR Code original por cima
+  ctx.drawImage(canvas, 0, 0, cleanCanvas.width, cleanCanvas.height);
+  
   const link = document.createElement('a');
-  link.download = `QR_${(dom.qrModal.dataset.participantName || 'qrcode').replace(/\s+/g, '_')}.png`;
-  link.href = canvas.toDataURL('image/png'); link.click();
+  link.download = `QR_${(dom.qrModal.dataset.participantName || 'participante').replace(/\s+/g, '_')}.png`;
+  link.href = cleanCanvas.toDataURL('image/png', 1.0);
+  link.click();
+  
   showToast('QR Code baixado com sucesso', 'success');
 }
 
