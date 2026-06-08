@@ -9,7 +9,6 @@ Google Sheets integration, and all UI interactions.
 // ============================================
 // CONFIGURATION & STATE
 // ============================================
-const APP_PASSWORD = 'IFMSAFAPI123';
 const STORAGE_KEYS = {
   scriptUrl: 'eventcheck_script_url',
   eventName: 'eventcheck_event_name',
@@ -35,10 +34,6 @@ const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
 const dom = {
-  loginScreen: $('#login-screen'),
-  passwordInput: $('#password-input'),
-  loginBtn: $('#login-btn'),
-  loginError: $('#login-error'),
   app: $('#app'),
   headerEventName: $('#header-event-name'),
   statusDot: $('#status-dot'),
@@ -96,10 +91,6 @@ function init() {
   loadConfig();
   bindEvents();
   registerServiceWorker();
-  dom.passwordInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') handleLogin();
-  });
-  setTimeout(() => dom.passwordInput.focus(), 500);
 }
 
 function loadConfig() {
@@ -111,6 +102,8 @@ function loadConfig() {
     dom.headerEventName.textContent = state.eventName;
   }
   if (state.scriptUrl) dom.configScriptUrl.value = state.scriptUrl;
+  // Auto-connect if script URL is configured
+  if (state.scriptUrl) { updateConnectionStatus(true); refreshData(); }
 }
 
 function registerServiceWorker() {
@@ -125,7 +118,6 @@ function registerServiceWorker() {
 // EVENT BINDING
 // ============================================
 function bindEvents() {
-  dom.loginBtn.addEventListener('click', handleLogin);
   dom.navItems.forEach(item => item.addEventListener('click', () => navigateTo(item.dataset.section)));
   dom.refreshBtn.addEventListener('click', refreshData);
   dom.logoutBtn.addEventListener('click', handleLogout);
@@ -145,34 +137,17 @@ function bindEvents() {
 }
 
 // ============================================
-// AUTHENTICATION
+// AUTHENTICATION (REMOVED - NO LOGIN REQUIRED)
 // ============================================
-function handleLogin() {
-  const password = dom.passwordInput.value.trim();
-  if (password === APP_PASSWORD) {
-    state.isAuthenticated = true;
-    dom.loginScreen.classList.add('hidden');
-    dom.app.classList.remove('hidden');
-    dom.loginError.classList.remove('visible');
-    if (state.scriptUrl) { updateConnectionStatus(true); refreshData(); }
-    showToast('Bem-vindo ao EventCheck! 🎓', 'success');
-  } else {
-    dom.loginError.classList.add('visible');
-    dom.passwordInput.value = '';
-    dom.passwordInput.focus();
-    dom.loginError.style.animation = 'none';
-    dom.loginError.offsetHeight;
-    dom.loginError.style.animation = '';
-  }
-}
-
 function handleLogout() {
-  state.isAuthenticated = false;
-  stopScanner();
-  dom.app.classList.add('hidden');
-  dom.loginScreen.classList.remove('hidden');
-  dom.passwordInput.value = '';
-  dom.passwordInput.focus();
+  // Clear local data and redirect to config for fresh setup
+  if (confirm('Deseja limpar as configurações locais e desconectar?')) {
+    localStorage.removeItem(STORAGE_KEYS.scriptUrl);
+    localStorage.removeItem(STORAGE_KEYS.eventName);
+    localStorage.removeItem(STORAGE_KEYS.recentCheckins);
+    localStorage.removeItem(STORAGE_KEYS.participants);
+    window.location.reload();
+  }
 }
 
 // ============================================
@@ -193,7 +168,7 @@ function navigateTo(sectionName) {
 // ============================================
 async function apiGet(action) {
   if (!state.scriptUrl) { showToast('Configure a URL do Apps Script primeiro', 'warning'); throw new Error('No script URL'); }
-  const url = `${state.scriptUrl}?action=${action}&password=${encodeURIComponent(APP_PASSWORD)}&t=${Date.now()}`;
+  const url = `${state.scriptUrl}?action=${action}&password=${encodeURIComponent()}&t=${Date.now()}`;
   const response = await fetch(url, { method: 'GET', redirect: 'follow' });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
@@ -205,7 +180,7 @@ async function apiPost(data) {
     method: 'POST', mode: 'cors',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     redirect: 'follow',
-    body: JSON.stringify({ ...data, password: APP_PASSWORD })
+    body: JSON.stringify({ ...data, password:  })
   });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
@@ -274,23 +249,27 @@ function parseDate(dateStr) {
 // QR CODE SCANNER (OTIMIZADO PARA MOBILE)
 // ============================================
 async function startScanner() {
+  if (state.isScanning) return;
+  
   try {
-    dom.startScanBtn.classList.add('hidden'); dom.stopScanBtn.classList.remove('hidden');
-    dom.scannerPlaceholder.classList.add('hidden'); dom.scannerViewport.classList.add('scanning');
+    dom.startScanBtn.classList.add('hidden');
+    dom.stopScanBtn.classList.remove('hidden');
+    dom.scannerPlaceholder.classList.add('hidden');
+    dom.scannerViewport.classList.add('scanning');
+    
     state.scanner = new Html5Qrcode('scanner-view');
 
     const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
-    const containerW = dom.scannerViewport.offsetWidth || Math.min(window.innerWidth, 400);
+    const containerW = dom.scannerViewport.offsetWidth || Math.min(window.innerWidth - 40, 400);
     
-    // QR Box menor no celular ajuda no foco e leitura
-    const qrboxPercent = isMobile ? 0.65 : 0.75; 
-    const qrboxSize = Math.max(250, Math.floor(containerW * qrboxPercent));
+    // QR Box maior no mobile para melhor captura
+    const qrboxSize = isMobile ? Math.max(280, Math.floor(containerW * 0.75)) : Math.max(300, Math.floor(containerW * 0.7));
 
     const config = {
-      fps: isMobile ? 25 : 15, // Mais frames no mobile para captura rápida
+      fps: isMobile ? 15 : 10,
       qrbox: { width: qrboxSize, height: qrboxSize },
       disableFlip: false,
-      experimentalFeatures: { useBarCodeDetectorIfSupported: true } // API nativa do navegador
+      experimentalFeatures: { useBarCodeDetectorIfSupported: true }
     };
 
     const started = await _startCameraWithFallback(config, isMobile);
@@ -299,11 +278,18 @@ async function startScanner() {
     state.isScanning = true;
     showToast('Scanner ativado. Aponte para um QR Code.', 'info');
   } catch (err) {
-    console.error('Scanner error:', err); resetScannerUI();
+    console.error('Scanner error:', err);
+    resetScannerUI();
     const msg = err.toString();
-    if (msg.includes('Permission') || msg.includes('NotAllowed')) showToast('Permissão de câmera negada.', 'error');
-    else if (msg.includes('NotFound')) showToast('Nenhuma câmera encontrada.', 'error');
-    else showToast('Erro ao iniciar câmera: ' + msg, 'error');
+    if (msg.includes('Permission') || msg.includes('NotAllowed')) {
+      showToast('Permissão de câmera negada. Verifique as configurações do navegador.', 'error');
+    } else if (msg.includes('NotFound')) {
+      showToast('Nenhuma câmera encontrada neste dispositivo.', 'error');
+    } else if (msg.includes('NotReadable') || msg.includes('Could not start')) {
+      showToast('Câmera já está em uso por outro aplicativo.', 'error');
+    } else {
+      showToast('Erro ao iniciar câmera: ' + err.message, 'error');
+    }
   }
 }
 
@@ -311,29 +297,31 @@ async function _startCameraWithFallback(config, isMobile) {
   const idealWidth = isMobile ? 1280 : 1920;
   const idealHeight = isMobile ? 720 : 1080;
 
-  // Strategy 1
   try {
-    await state.scanner.start({ facingMode: { exact: 'environment' }, width: { ideal: idealWidth }, height: { ideal: idealHeight } }, config, onScanSuccess, () => {});
+    await state.scanner.start(
+      { facingMode: { exact: 'environment' }, width: { ideal: idealWidth }, height: { ideal: idealHeight } },
+      config, onScanSuccess, () => {}
+    );
     return true;
   } catch (e1) { console.warn('Strategy 1 failed:', e1); }
 
-  // Strategy 2
   try {
-    await state.scanner.start({ facingMode: 'environment', width: { ideal: idealWidth }, height: { ideal: idealHeight } }, config, onScanSuccess, () => {});
+    await state.scanner.start(
+      { facingMode: 'environment', width: { ideal: idealWidth }, height: { ideal: idealHeight } },
+      config, onScanSuccess, () => {}
+    );
     return true;
   } catch (e2) { console.warn('Strategy 2 failed:', e2); }
 
-  // Strategy 3
   try {
     const cameras = await Html5Qrcode.getCameras();
     if (cameras && cameras.length > 0) {
-      const backCam = cameras.find(c => /back|rear|trás|environment/i.test(c.label)) || cameras[cameras.length - 1];
+      const backCam = cameras.find(c => /back|rear|trás|ambiente|environment|principal/i.test(c.label)) || cameras[cameras.length - 1];
       await state.scanner.start(backCam.id, config, onScanSuccess, () => {});
       return true;
     }
   } catch (e3) { console.warn('Strategy 3 failed:', e3); }
 
-  // Strategy 4 (Fallback total)
   try {
     await state.scanner.start({ facingMode: 'environment' }, config, onScanSuccess, () => {});
     return true;
