@@ -2,32 +2,1240 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="description" content="Sistema de autenticação de presença em eventos acadêmicos via QR Code com integração ao Google Planilhas">
   <meta name="theme-color" content="#0a1628">
-  <meta name="description" content="Sistema de presença em eventos acadêmicos via QR Code">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="EventCheck">
-  
-  <title>EventCheck — Presença em Eventos</title>
-  
-  <link rel="manifest" href="./manifest.json">
-  <link rel="stylesheet" href="./styles.css">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%230a1628'/%3E%3Crect x='30' y='30' width='52' height='52' rx='6' fill='%231565c0'/%3E%3Crect x='110' y='30' width='52' height='52' rx='6' fill='%231565c0'/%3E%3Crect x='30' y='110' width='52' height='52' rx='6' fill='%231565c0'/%3E%3Ccircle cx='136' cy='136' r='30' fill='none' stroke='%2300e676' stroke-width='6'/%3E%3Cpath d='M121 136l10 10 20-20' fill='none' stroke='%2300e676' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
-  
-  <!-- External Libraries -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <!-- Allow inline video playback on iOS (required for camera preview in PWA mode) -->
+  <meta name="apple-touch-fullscreen" content="no">
+  <title>EventCheck — Autenticação de Eventos</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a1628'/%3E%3Crect x='5' y='5' width='9' height='9' rx='1' fill='%231565c0'/%3E%3Crect x='18' y='5' width='9' height='9' rx='1' fill='%231565c0'/%3E%3Crect x='5' y='18' width='9' height='9' rx='1' fill='%231565c0'/%3E%3Ccircle cx='22.5' cy='22.5' r='5' fill='none' stroke='%2300e676' stroke-width='1.5'/%3E%3C/svg%3E">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- html5-qrcode for camera scanning -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <!-- qrcode.js for QR generation -->
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
+  <!-- ==================== INLINE CSS ==================== -->
+  <style>
+    /* --- CSS Custom Properties --- */
+    :root {
+      --bg-deepest: #040a18;
+      --bg-primary: #060d1f;
+      --bg-secondary: #0a1628;
+      --bg-tertiary: #0f1f3d;
+      --bg-elevated: #142952;
+      --bg-glass: rgba(10, 22, 40, 0.75);
+      --bg-glass-light: rgba(20, 41, 82, 0.45);
+
+      --accent-primary: #1565c0;
+      --accent-secondary: #1e88e5;
+      --accent-tertiary: #42a5f5;
+      --accent-glow: rgba(30, 136, 229, 0.3);
+      --accent-glow-strong: rgba(30, 136, 229, 0.5);
+
+      --success: #00e676;
+      --success-bg: rgba(0, 230, 118, 0.12);
+      --success-glow: rgba(0, 230, 118, 0.35);
+      --error: #ff1744;
+      --error-bg: rgba(255, 23, 68, 0.12);
+      --error-glow: rgba(255, 23, 68, 0.35);
+      --warning: #ffab00;
+      --warning-bg: rgba(255, 171, 0, 0.12);
+
+      --text-primary: #e8eaf6;
+      --text-secondary: #7889a8;
+      --text-muted: #4a5a78;
+      --text-accent: #64b5f6;
+
+      --border: rgba(66, 165, 245, 0.12);
+      --border-strong: rgba(66, 165, 245, 0.25);
+      --border-glow: rgba(30, 136, 229, 0.4);
+
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
+      --shadow-glow: 0 0 30px var(--accent-glow);
+
+      --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+
+      --nav-height: 72px;
+      --header-height: 64px;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    /* --- Reset & Base --- */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      font-size: 16px;
+      -webkit-text-size-adjust: 100%;
+      -webkit-tap-highlight-color: transparent;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg-deepest);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+      min-height: 100vh;
+      min-height: 100dvh;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 20%, rgba(21, 101, 192, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(30, 136, 229, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(66, 165, 245, 0.03) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    input, button, textarea, select {
+      font-family: inherit;
+      font-size: inherit;
+      color: inherit;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--bg-elevated); border-radius: 4px; }
+
+    /* ============================================
+       LOGIN SCREEN
+       ============================================ */
+    #login-screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      background: var(--bg-deepest);
+      padding: 24px;
+    }
+
+    #login-screen::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(21, 101, 192, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(21, 101, 192, 0.06) 1px, transparent 1px);
+      background-size: 40px 40px;
+      animation: gridMove 20s linear infinite;
+    }
+
+    #login-screen::after {
+      content: '';
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      animation: breathe 4s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes gridMove {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(40px, 40px); }
+    }
+
+    @keyframes breathe {
+      0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
+      50% { opacity: 0.5; transform: translate(-50%, -50%) scale(1.1); }
+    }
+
+    .login-card {
+      position: relative;
+      z-index: 1;
+      background: var(--bg-glass);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-xl);
+      padding: 48px 36px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      box-shadow: var(--shadow-lg), 0 0 60px rgba(21, 101, 192, 0.08);
+      animation: slideUp 0.6s var(--transition-normal);
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .login-logo {
+      width: 88px;
+      height: 88px;
+      margin: 0 auto 20px;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      box-shadow: 0 8px 32px rgba(21, 101, 192, 0.3);
+      animation: logoFloat 3s ease-in-out infinite;
+    }
+
+    @keyframes logoFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    .login-card h1 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+      background: linear-gradient(135deg, var(--text-primary), var(--accent-tertiary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .login-card .subtitle {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+      font-weight: 400;
+    }
+
+    .login-input-group {
+      position: relative;
+      margin-bottom: 24px;
+    }
+
+    .login-input-group .input-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.1rem;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .login-input-group input {
+      width: 100%;
+      padding: 14px 16px 14px 48px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    .login-input-group input:focus {
+      border-color: var(--accent-secondary);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .login-input-group input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .login-error {
+      color: var(--error);
+      font-size: 0.8rem;
+      margin-top: -16px;
+      margin-bottom: 16px;
+      display: none;
+      animation: shake 0.4s ease-in-out;
+    }
+
+    .login-error.visible {
+      display: block;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
+    }
+
+    /* ============================================
+       BUTTONS
+       ============================================ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border: none;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      position: relative;
+      overflow: hidden;
+      letter-spacing: 0.01em;
+    }
+
+    .btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+      opacity: 0;
+      transition: opacity var(--transition-fast);
+    }
+
+    .btn:hover::after { opacity: 1; }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      color: white;
+      box-shadow: 0 4px 16px rgba(21, 101, 192, 0.35);
+      width: 100%;
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 6px 24px rgba(21, 101, 192, 0.5);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active { transform: translateY(0) scale(0.98); }
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--border-strong);
+      background: var(--bg-elevated);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #00c853, #00e676);
+      color: #0a1628;
+      font-weight: 700;
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #c62828, #e53935);
+      color: white;
+    }
+
+    .btn-icon {
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border-radius: var(--radius-sm);
+      font-size: 1.2rem;
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .btn .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ============================================
+       APP LAYOUT
+       ============================================ */
+    #app {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      height: var(--header-height);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-logo {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .header-info h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.2;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .header-info .event-status {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      display: inline-block;
+    }
+
+    .status-dot.connected {
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success-glow);
+      animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* --- Sections --- */
+    .section {
+      flex: 1;
+      padding: 20px;
+      padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + 20px);
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .section.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .section-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    /* ============================================
+       BOTTOM NAVIGATION
+       ============================================ */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: calc(var(--nav-height) + var(--safe-bottom));
+      padding-bottom: var(--safe-bottom);
+      background: var(--bg-glass);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      z-index: 100;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 16px;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      border-radius: var(--radius-sm);
+      position: relative;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .nav-item .nav-icon { font-size: 1.35rem; transition: transform var(--transition-fast); }
+    .nav-item .nav-label { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.02em; }
+    .nav-item.active { color: var(--accent-tertiary); }
+    .nav-item.active .nav-icon { transform: scale(1.1); }
+
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 24px;
+      height: 3px;
+      background: var(--accent-secondary);
+      border-radius: 0 0 3px 3px;
+    }
+
+    .nav-item:active { transform: scale(0.92); }
+
+    /* ============================================
+       DASHBOARD
+       ============================================ */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--bg-glass);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 18px 16px;
+      position: relative;
+      overflow: hidden;
+      transition: all var(--transition-normal);
+    }
+
+    .stat-card:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 3px 3px 0 0;
+    }
+
+    .stat-card.total::before { background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary)); }
+    .stat-card.present::before { background: linear-gradient(90deg, #00c853, #00e676); }
+    .stat-card.absent::before { background: linear-gradient(90deg, #e65100, #ff9100); }
+    .stat-card.percentage::before { background: linear-gradient(90deg, #6a1b9a, #ab47bc); }
+
+    .stat-icon { font-size: 1.3rem; margin-bottom: 8px; }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 4px;
+      letter-spacing: -0.02em;
+    }
+
+    .stat-card.total .stat-value { color: var(--accent-tertiary); }
+    .stat-card.present .stat-value { color: var(--success); }
+    .stat-card.absent .stat-value { color: #ff9100; }
+    .stat-card.percentage .stat-value { color: #ab47bc; }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .recent-section { margin-top: 8px; }
+
+    .recent-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .recent-header h3 { font-size: 0.95rem; font-weight: 600; }
+
+    .recent-count {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      background: var(--bg-tertiary);
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    .recent-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .recent-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--bg-glass-light);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      animation: slideInRight 0.3s ease;
+    }
+
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(-16px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .recent-item .check-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--success-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .recent-item .item-info { flex: 1; min-width: 0; }
+
+    .recent-item .item-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .recent-item .item-time { font-size: 0.72rem; color: var(--text-secondary); }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--text-muted);
+    }
+
+    .empty-state .empty-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.5; }
+    .empty-state p { font-size: 0.9rem; max-width: 260px; margin: 0 auto; }
+
+    /* ============================================
+       SCANNER
+       ============================================ */
+    .scanner-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .scanner-viewport {
+      width: 100%;
+      max-width: 400px;
+      aspect-ratio: 1;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      position: relative;
+      background: var(--bg-secondary);
+      border: 2px solid var(--border-strong);
+    }
+
+    .scanner-viewport.scanning {
+      border-color: var(--accent-secondary);
+      box-shadow: 0 0 30px var(--accent-glow), 0 0 60px rgba(21, 101, 192, 0.1);
+    }
+
+    .scanner-corners {
+      position: absolute;
+      inset: 12px;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    .scanner-corners::before,
+    .scanner-corners::after,
+    .corner-bl,
+    .corner-br {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-color: var(--accent-tertiary);
+      border-style: solid;
+      border-width: 0;
+    }
+
+    .scanner-corners::before { content: ''; top: 0; left: 0; border-top-width: 3px; border-left-width: 3px; border-radius: 4px 0 0 0; }
+    .scanner-corners::after { content: ''; top: 0; right: 0; border-top-width: 3px; border-right-width: 3px; border-radius: 0 4px 0 0; }
+    .corner-bl { bottom: 0; left: 0; border-bottom-width: 3px; border-left-width: 3px; border-radius: 0 0 0 4px; }
+    .corner-br { bottom: 0; right: 0; border-bottom-width: 3px; border-right-width: 3px; border-radius: 0 0 4px 0; }
+
+    .scanner-laser {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent-tertiary), transparent);
+      z-index: 6;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .scanning .scanner-laser {
+      opacity: 1;
+      animation: laserScan 2.5s ease-in-out infinite;
+    }
+
+    @keyframes laserScan {
+      0%, 100% { top: 15%; }
+      50% { top: 85%; }
+    }
+
+    #scanner-view { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+    #scanner-view video { width: 100% !important; height: 100% !important; border-radius: var(--radius-lg) !important; object-fit: cover !important; -webkit-playsinline: true; }
+    #scanner-view img { display: none !important; }
+    #scanner-view > div[style] { border-radius: var(--radius-lg) !important; }
+
+    .scanner-controls {
+      display: flex;
+      gap: 12px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .scanner-controls .btn { flex: 1; }
+
+    .scanner-tip {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      text-align: center;
+      max-width: 300px;
+    }
+
+    .scan-result {
+      position: fixed;
+      bottom: calc(var(--nav-height) + var(--safe-bottom) + 16px);
+      left: 16px;
+      right: 16px;
+      padding: 20px;
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 200;
+      animation: resultSlideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: none;
+    }
+
+    .scan-result.visible {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .scan-result.success {
+      background: rgba(0, 230, 118, 0.15);
+      border: 1px solid rgba(0, 230, 118, 0.3);
+      box-shadow: 0 8px 32px rgba(0, 230, 118, 0.15);
+    }
+
+    .scan-result.error {
+      background: rgba(255, 23, 68, 0.15);
+      border: 1px solid rgba(255, 23, 68, 0.3);
+      box-shadow: 0 8px 32px rgba(255, 23, 68, 0.15);
+    }
+
+    .scan-result.duplicate {
+      background: rgba(255, 171, 0, 0.15);
+      border: 1px solid rgba(255, 171, 0, 0.3);
+      box-shadow: 0 8px 32px rgba(255, 171, 0, 0.15);
+    }
+
+    .scan-result.loading {
+      background: rgba(30, 136, 229, 0.15);
+      border: 1px solid rgba(30, 136, 229, 0.3);
+      box-shadow: 0 8px 32px rgba(30, 136, 229, 0.15);
+    }
+
+    @keyframes resultSlideUp {
+      from { opacity: 0; transform: translateY(30px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .result-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .scan-result.success .result-icon { background: var(--success-bg); }
+    .scan-result.error .result-icon { background: var(--error-bg); }
+    .scan-result.duplicate .result-icon { background: var(--warning-bg); }
+    .scan-result.loading .result-icon { background: rgba(30,136,229,0.12); }
+
+    .result-info { flex: 1; min-width: 0; }
+
+    .result-name { font-size: 1rem; font-weight: 700; }
+
+    .scan-result.success .result-name { color: var(--success); }
+    .scan-result.error .result-name { color: var(--error); }
+    .scan-result.duplicate .result-name { color: var(--warning); }
+    .scan-result.loading .result-name { color: var(--accent-tertiary); }
+
+    .result-message { font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px; }
+
+    /* ============================================
+       QR CODES
+       ============================================ */
+    .qr-toolbar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .qr-toolbar .btn { flex: 1; min-width: 140px; }
+
+    .qr-search { position: relative; margin-bottom: 16px; }
+
+    .qr-search input {
+      width: 100%;
+      padding: 12px 16px 12px 44px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color var(--transition-fast);
+    }
+
+    .qr-search input:focus { border-color: var(--accent-secondary); }
+
+    .qr-search .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0.4;
+    }
+
+    .qr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+    }
+
+    .qr-card {
+      background: var(--bg-glass);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      text-align: center;
+      transition: all var(--transition-normal);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .qr-card:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .qr-card.checked-in { border-color: rgba(0, 230, 118, 0.25); }
+
+    .qr-card.checked-in::after {
+      content: '✓';
+      position: absolute;
+      top: 8px; right: 8px;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--success);
+      color: var(--bg-primary);
+      font-size: 0.7rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .qr-card canvas,
+    .qr-card img {
+      width: 100% !important;
+      height: auto !important;
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      background: white;
+      padding: 8px;
+    }
+
+    .qr-card .qr-name {
+      font-size: 0.8rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .qr-card .qr-email {
+      font-size: 0.68rem;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ============================================
+       CONFIG
+       ============================================ */
+    .config-form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 500px;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .input-group label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .input-group input,
+    .input-group textarea {
+      padding: 14px 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    .input-group input:focus,
+    .input-group textarea:focus {
+      border-color: var(--accent-secondary);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .input-group input::placeholder,
+    .input-group textarea::placeholder { color: var(--text-muted); }
+
+    .input-group .input-hint {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .config-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 8px 0;
+    }
+
+    .config-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .config-actions .btn { flex: 1; }
+
+    .connection-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      background: var(--bg-glass-light);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      font-size: 0.85rem;
+    }
+
+    .connection-status.ok { border-color: rgba(0, 230, 118, 0.25); color: var(--success); }
+    .connection-status.fail { border-color: rgba(255, 23, 68, 0.25); color: var(--error); }
+
+    /* ============================================
+       TOAST NOTIFICATIONS
+       ============================================ */
+    .toast-container {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      z-index: 500;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      font-size: 0.85rem;
+      font-weight: 500;
+      animation: toastIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toast.info { background: rgba(30, 136, 229, 0.2); border: 1px solid rgba(30, 136, 229, 0.3); color: var(--accent-tertiary); }
+    .toast.success { background: rgba(0, 230, 118, 0.15); border: 1px solid rgba(0, 230, 118, 0.3); color: var(--success); }
+    .toast.error { background: rgba(255, 23, 68, 0.15); border: 1px solid rgba(255, 23, 68, 0.3); color: var(--error); }
+    .toast.warning { background: rgba(255, 171, 0, 0.15); border: 1px solid rgba(255, 171, 0, 0.3); color: var(--warning); }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .toast.removing { animation: toastOut 0.3s ease forwards; }
+
+    @keyframes toastOut {
+      to { opacity: 0; transform: translateY(-10px) scale(0.95); }
+    }
+
+    /* ============================================
+       LOADING OVERLAY
+       ============================================ */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 10, 24, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      z-index: 300;
+    }
+
+    .loading-spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent-secondary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .loading-text { font-size: 0.9rem; color: var(--text-secondary); }
+
+    /* ============================================
+       MODAL
+       ============================================ */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 10, 24, 0.9);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 400;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .modal-content {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-xl);
+      padding: 32px;
+      max-width: 380px;
+      width: 100%;
+      text-align: center;
+      animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .modal-content h3 { font-size: 1.1rem; margin-bottom: 4px; }
+    .modal-content .modal-subtitle { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 20px; }
+
+    .modal-qr {
+      background: white;
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-bottom: 20px;
+      display: inline-block;
+    }
+
+    .modal-qr canvas { display: block; }
+
+    .modal-actions { display: flex; gap: 10px; }
+    .modal-actions .btn { flex: 1; }
+
+    /* ============================================
+       PRINT STYLES
+       ============================================ */
+    @media print {
+      body { background: white !important; color: black !important; }
+      body::before, .app-header, .bottom-nav, .toast-container, .scan-result, .qr-toolbar, .qr-search { display: none !important; }
+      .section { display: block !important; padding: 0 !important; }
+      .qr-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 16px !important; }
+      .qr-card { background: white !important; border: 1px solid #ddd !important; break-inside: avoid; }
+      .qr-card .qr-name { color: black !important; }
+      .qr-card .qr-email { color: #666 !important; }
+    }
+
+    /* ============================================
+       RESPONSIVE
+       ============================================ */
+    @media (max-width: 380px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .qr-grid { grid-template-columns: 1fr; }
+      .login-card { padding: 32px 24px; }
+      .stat-value { font-size: 1.6rem; }
+    }
+
+    @media (min-width: 768px) {
+      .stats-grid { grid-template-columns: repeat(4, 1fr); }
+      .qr-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+      .scanner-viewport { max-width: 450px; }
+      .section { padding: 28px 40px; padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + 28px); }
+    }
+
+    @media (min-width: 1024px) {
+      .section { max-width: 900px; margin: 0 auto; padding: 32px 20px; padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + 32px); }
+      .bottom-nav { max-width: 600px; left: 50%; transform: translateX(-50%); border-radius: var(--radius-lg) var(--radius-lg) 0 0; border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+    }
+  </style>
 </head>
 <body>
-  <!-- Main App -->
-  <div id="app">
+
+  <!-- ==================== LOGIN SCREEN ==================== -->
+  <div id="login-screen">
+    <div class="login-card">
+      <div class="login-logo">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+          <rect x="2" y="2" width="14" height="14" rx="2" fill="white" opacity="0.9"/>
+          <rect x="24" y="2" width="14" height="14" rx="2" fill="white" opacity="0.9"/>
+          <rect x="2" y="24" width="14" height="14" rx="2" fill="white" opacity="0.9"/>
+          <circle cx="31" cy="31" r="8" stroke="#00e676" stroke-width="2.5" fill="none"/>
+          <path d="M27 31l3 3 5-5" stroke="#00e676" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+      </div>
+      <h1>EventCheck</h1>
+      <p class="subtitle">Sistema de Autenticação de Eventos</p>
+      <div class="login-input-group">
+        <span class="input-icon">🔒</span>
+        <input type="password" id="password-input" placeholder="Digite a senha de acesso" autocomplete="off">
+      </div>
+      <p class="login-error" id="login-error">Senha incorreta. Tente novamente.</p>
+      <button class="btn btn-primary" id="login-btn" type="button">
+        Entrar
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== MAIN APP ==================== -->
+  <div id="app" class="hidden">
+
     <!-- Header -->
     <header class="app-header">
       <div class="header-left">
-        <div class="header-logo">🎓</div>
+        <div class="header-logo">
+          <svg width="18" height="18" viewBox="0 0 40 40" fill="none">
+            <rect x="2" y="2" width="14" height="14" rx="2" fill="white" opacity="0.9"/>
+            <rect x="24" y="2" width="14" height="14" rx="2" fill="white" opacity="0.9"/>
+            <rect x="2" y="24" width="14" height="14" rx="2" fill="white" opacity="0.9"/>
+            <circle cx="31" cy="31" r="7" stroke="#00e676" stroke-width="2" fill="none"/>
+            <path d="M27.5 31l2.5 2.5 4-4" stroke="#00e676" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </div>
         <div class="header-info">
-          <h2 id="header-event-name">EventCheck</h2>
+          <h2 id="header-event-name">Configurar Evento</h2>
           <div class="event-status">
             <span class="status-dot" id="status-dot"></span>
             <span id="status-text">Desconectado</span>
@@ -40,15 +1248,14 @@
       </div>
     </header>
 
-    <!-- Dashboard Section -->
+    <!-- ==================== DASHBOARD ==================== -->
     <section id="dashboard-section" class="section active">
-      <h3 class="section-title">Dashboard</h3>
-      
+      <p class="section-title">Visão Geral</p>
       <div class="stats-grid">
         <div class="stat-card total">
           <div class="stat-icon">👥</div>
           <div class="stat-value" id="stat-total">—</div>
-          <div class="stat-label">Total</div>
+          <div class="stat-label">Total Inscritos</div>
         </div>
         <div class="stat-card present">
           <div class="stat-icon">✅</div>
@@ -56,73 +1263,58 @@
           <div class="stat-label">Presentes</div>
         </div>
         <div class="stat-card absent">
-          <div class="stat-icon">❌</div>
+          <div class="stat-icon">⏳</div>
           <div class="stat-value" id="stat-absent">—</div>
           <div class="stat-label">Ausentes</div>
         </div>
         <div class="stat-card percentage">
           <div class="stat-icon">📊</div>
           <div class="stat-value" id="stat-percentage">—</div>
-          <div class="stat-label">Presença</div>
+          <div class="stat-label">% Presença</div>
         </div>
       </div>
-
       <div class="recent-section">
         <div class="recent-header">
-          <h3>Check-ins recentes</h3>
+          <h3>Check-ins Recentes</h3>
           <span class="recent-count" id="recent-count">0 hoje</span>
         </div>
         <div class="recent-list" id="recent-list">
           <div class="empty-state" id="empty-recent">
-            <div class="empty-icon">📭</div>
-            <p>Nenhum check-in ainda.</p>
+            <div class="empty-icon">📋</div>
+            <p>Nenhum check-in registrado ainda. Use o scanner para registrar presenças.</p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Scanner Section -->
+    <!-- ==================== SCANNER ==================== -->
     <section id="scanner-section" class="section">
-      <h3 class="section-title">Scanner de presença</h3>
-      
+      <p class="section-title">Scanner de Presença</p>
       <div class="scanner-wrapper">
         <div class="scanner-viewport" id="scanner-viewport">
-          <div id="scanner-view"></div>
           <div class="scanner-corners">
             <div class="corner-bl"></div>
             <div class="corner-br"></div>
           </div>
           <div class="scanner-laser"></div>
+          <div id="scanner-view"></div>
+          <div class="empty-state" id="scanner-placeholder" style="padding-top: 80px;">
+            <div class="empty-icon">📷</div>
+            <p>Toque em "Iniciar Scanner" para ativar a câmera</p>
+          </div>
         </div>
-        
-        <div class="scanner-placeholder" id="scanner-placeholder">
-          <p style="text-align: center; color: var(--text-secondary); padding: 20px;">
-            📷 Inicie a câmera para ler QR Codes.
-          </p>
-        </div>
-        
         <div class="scanner-controls">
-          <button class="btn btn-primary" id="start-scan-btn">
-            <span>📷</span>
-            <span>Iniciar scanner</span>
-          </button>
-          <button class="btn btn-danger hidden" id="stop-scan-btn">
-            <span>⏹️</span>
-            <span>Parar</span>
-          </button>
-          <label class="btn btn-secondary" style="cursor: pointer;">
-            <span>📁</span>
-            <span>Enviar imagem</span>
-            <input type="file" id="qr-file-input" accept="image/*" style="display: none;">
+          <button class="btn btn-primary" id="start-scan-btn">📷 Iniciar Scanner</button>
+          <button class="btn btn-danger hidden" id="stop-scan-btn">⏹ Parar</button>
+        </div>
+        <p class="scanner-tip">Aponte a câmera para o QR Code do participante. O check-in será registrado automaticamente.</p>
+        <div style="margin-top: 8px;">
+          <label class="btn btn-secondary" style="cursor: pointer; display: inline-flex;">
+            📁 Enviar imagem de QR
+            <input type="file" accept="image/*" capture="environment" id="qr-file-input" style="display: none;">
           </label>
         </div>
-        
-        <p class="scanner-tip">
-          💡 <strong>Dica:</strong> Mantenha uma distância de 20 a 30cm e centralize o QR Code na tela para uma leitura instantânea.
-        </p>
       </div>
-
-      <!-- Scan Result Overlay -->
       <div class="scan-result" id="scan-result">
         <div class="result-icon" id="result-icon"></div>
         <div class="result-info">
@@ -132,83 +1324,66 @@
       </div>
     </section>
 
-    <!-- QR Codes Section -->
-    <section id="qr-section" class="section">
-      <h3 class="section-title">QR Codes</h3>
-      
+    <!-- ==================== QR CODES ==================== -->
+    <section id="qrcodes-section" class="section">
+      <p class="section-title">QR Codes dos Participantes</p>
       <div class="qr-toolbar">
-        <button class="btn btn-primary" id="load-qr-btn">
-          <span>📥</span>
-          <span>Carregar da planilha</span>
-        </button>
-        <button class="btn btn-secondary" id="print-qr-btn">
-          <span>🖨️</span>
-          <span>Imprimir</span>
-        </button>
+        <button class="btn btn-primary" id="load-qr-btn">📥 Carregar da Planilha</button>
+        <button class="btn btn-secondary" id="print-qr-btn">🖨️ Imprimir Todos</button>
       </div>
-
       <div class="qr-search">
         <span class="search-icon">🔍</span>
         <input type="text" id="qr-search-input" placeholder="Buscar participante...">
       </div>
-
       <div class="qr-grid" id="qr-grid">
         <div class="empty-state" id="empty-qr">
           <div class="empty-icon">📱</div>
-          <p>Carregue os participantes para gerar os QR Codes.</p>
+          <p>Carregue os participantes da planilha para gerar os QR Codes.</p>
         </div>
       </div>
     </section>
 
-    <!-- Config Section -->
+    <!-- ==================== CONFIGURAÇÕES ==================== -->
     <section id="config-section" class="section">
-      <h3 class="section-title">Configurações</h3>
-      
+      <p class="section-title">Configurações do Evento</p>
       <div class="config-form">
         <div class="input-group">
-          <label for="config-event-name">Nome do evento</label>
-          <input type="text" id="config-event-name" placeholder="Ex: Semana Acadêmica 2024">
+          <label for="config-event-name">Nome do Evento</label>
+          <input type="text" id="config-event-name" placeholder="Ex: Semana Acadêmica 2026">
         </div>
-
         <div class="input-group">
           <label for="config-script-url">URL do Google Apps Script</label>
-          <input type="url" id="config-script-url" placeholder="https://script.google.com/macros/s/...">
-          <p class="input-hint">Cole a URL de implantação do seu Apps Script aqui.</p>
+          <input type="url" id="config-script-url" placeholder="https://script.google.com/macros/s/.../exec">
+          <span class="input-hint">Cole aqui a URL do Web App publicado do Google Apps Script.</span>
         </div>
-
         <div class="config-actions">
-          <button class="btn btn-primary" id="save-config-btn">
-            <span>💾</span>
-            <span>Salvar configurações</span>
-          </button>
-          <button class="btn btn-secondary" id="test-connection-btn">
-            <span>🔗</span>
-            <span>Testar conexão</span>
-          </button>
+          <button class="btn btn-primary" id="save-config-btn">💾 Salvar</button>
+          <button class="btn btn-secondary" id="test-connection-btn">🔗 Testar</button>
         </div>
-
         <div class="connection-status hidden" id="connection-status">
           <span id="connection-icon"></span>
           <span id="connection-text"></span>
         </div>
-
         <hr class="config-divider">
-
-        <div class="config-actions">
-          <button class="btn btn-secondary" id="generate-ids-btn">
-            <span>🔑</span>
-            <span>Gerar IDs para Participantes sem ID</span>
-          </button>
-          <button class="btn btn-danger" id="clear-data-btn">
-            <span>🗑️</span>
-            <span>Limpar dados locais</span>
-          </button>
-        </div>
-
         <div class="input-group">
-          <label>Formato da planilha</label>
-          <p class="input-hint">Nome | Email | Instituição | ID_Unico | Status | Data_Checkin</p>
+          <label>Instruções Rápidas</label>
+          <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.7;">
+            <p><strong>1.</strong> Crie uma planilha no Google Sheets com as colunas:<br>
+              <code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px; font-size: 0.78rem;">Nome | Email | Instituição | ID_Unico | Status | Data_Checkin</code>
+            </p>
+            <p style="margin-top: 10px;"><strong>2.</strong> Abra <strong>Extensões → Apps Script</strong> e cole o código do arquivo Code.gs</p>
+            <p style="margin-top: 10px;"><strong>3.</strong> Publique como Web App (Execute como: Eu, Acesso: Qualquer pessoa)</p>
+            <p style="margin-top: 10px;"><strong>4.</strong> Cole a URL acima e salve</p>
+          </div>
         </div>
+        <hr class="config-divider">
+        <div class="input-group">
+          <label>Ações</label>
+          <button class="btn btn-secondary" id="generate-ids-btn" style="margin-top: 4px;">🔑 Gerar IDs para Participantes sem ID</button>
+          <span class="input-hint">Gera IDs únicos automaticamente na coluna D para participantes que ainda não possuem.</span>
+        </div>
+        <hr class="config-divider">
+        <button class="btn btn-danger" id="clear-data-btn" style="margin-top: 8px;">🗑️ Limpar Dados Locais</button>
       </div>
     </section>
 
@@ -222,7 +1397,7 @@
         <span class="nav-icon">📷</span>
         <span class="nav-label">Scanner</span>
       </button>
-      <button class="nav-item" data-section="qr">
+      <button class="nav-item" data-section="qrcodes">
         <span class="nav-icon">📱</span>
         <span class="nav-label">QR Codes</span>
       </button>
@@ -233,27 +1408,21 @@
     </nav>
   </div>
 
-  <!-- QR Code Modal -->
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Modal for expanded QR view -->
   <div class="modal-backdrop hidden" id="qr-modal">
     <div class="modal-content">
-      <h3 id="modal-name">Nome do Participante</h3>
-      <p class="modal-subtitle" id="modal-email">email@exemplo.com</p>
+      <h3 id="modal-name"></h3>
+      <p class="modal-subtitle" id="modal-email"></p>
       <div class="modal-qr" id="modal-qr-container"></div>
       <div class="modal-actions">
-        <button class="btn btn-primary" id="modal-download-btn">
-          <span>⬇️</span>
-          <span>Baixar JPG</span>
-        </button>
-        <button class="btn btn-secondary" id="modal-close-btn">
-          <span>✖️</span>
-          <span>Fechar</span>
-        </button>
+        <button class="btn btn-primary" id="modal-download-btn">⬇️ Baixar</button>
+        <button class="btn btn-secondary" id="modal-close-btn">Fechar</button>
       </div>
     </div>
   </div>
-
-  <!-- Toast Container -->
-  <div class="toast-container" id="toast-container"></div>
 
   <!-- Loading Overlay -->
   <div class="loading-overlay hidden" id="loading-overlay">
@@ -261,7 +1430,778 @@
     <p class="loading-text" id="loading-text">Carregando...</p>
   </div>
 
-  <!-- Main App Script -->
-  <script src="./app.js"></script>
+  <!-- ==================== INLINE JS ==================== -->
+  <script>
+  (() => {
+    'use strict';
+
+    // ============================================
+    // CONFIGURATION & STATE
+    // ============================================
+    const APP_PASSWORD = 'IFMSAFAPI123';
+    const STORAGE_KEYS = {
+      scriptUrl: 'eventcheck_script_url',
+      eventName: 'eventcheck_event_name',
+      recentCheckins: 'eventcheck_recent',
+      participants: 'eventcheck_participants'
+    };
+
+    let state = {
+      isAuthenticated: false,
+      scriptUrl: '',
+      eventName: '',
+      participants: [],
+      recentCheckins: [],
+      scanner: null,
+      isScanning: false,
+      scanCooldown: false,
+      resultTimeout: null
+    };
+
+    // ============================================
+    // DOM ELEMENTS
+    // ============================================
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => document.querySelectorAll(sel);
+
+    const dom = {
+      loginScreen: $('#login-screen'),
+      passwordInput: $('#password-input'),
+      loginBtn: $('#login-btn'),
+      loginError: $('#login-error'),
+      app: $('#app'),
+      headerEventName: $('#header-event-name'),
+      statusDot: $('#status-dot'),
+      statusText: $('#status-text'),
+      refreshBtn: $('#refresh-btn'),
+      logoutBtn: $('#logout-btn'),
+      statTotal: $('#stat-total'),
+      statPresent: $('#stat-present'),
+      statAbsent: $('#stat-absent'),
+      statPercentage: $('#stat-percentage'),
+      recentList: $('#recent-list'),
+      recentCount: $('#recent-count'),
+      emptyRecent: $('#empty-recent'),
+      scannerViewport: $('#scanner-viewport'),
+      scannerPlaceholder: $('#scanner-placeholder'),
+      startScanBtn: $('#start-scan-btn'),
+      stopScanBtn: $('#stop-scan-btn'),
+      scanResult: $('#scan-result'),
+      resultIcon: $('#result-icon'),
+      resultName: $('#result-name'),
+      resultMessage: $('#result-message'),
+      qrFileInput: $('#qr-file-input'),
+      loadQrBtn: $('#load-qr-btn'),
+      printQrBtn: $('#print-qr-btn'),
+      qrSearchInput: $('#qr-search-input'),
+      qrGrid: $('#qr-grid'),
+      emptyQr: $('#empty-qr'),
+      configEventName: $('#config-event-name'),
+      configScriptUrl: $('#config-script-url'),
+      saveConfigBtn: $('#save-config-btn'),
+      testConnectionBtn: $('#test-connection-btn'),
+      connectionStatus: $('#connection-status'),
+      connectionIcon: $('#connection-icon'),
+      connectionText: $('#connection-text'),
+      generateIdsBtn: $('#generate-ids-btn'),
+      clearDataBtn: $('#clear-data-btn'),
+      bottomNav: $('#bottom-nav'),
+      navItems: $$('.nav-item'),
+      sections: $$('.section'),
+      qrModal: $('#qr-modal'),
+      modalName: $('#modal-name'),
+      modalEmail: $('#modal-email'),
+      modalQrContainer: $('#modal-qr-container'),
+      modalDownloadBtn: $('#modal-download-btn'),
+      modalCloseBtn: $('#modal-close-btn'),
+      toastContainer: $('#toast-container'),
+      loadingOverlay: $('#loading-overlay'),
+      loadingText: $('#loading-text')
+    };
+
+    // ============================================
+    // INITIALIZATION
+    // ============================================
+    function init() {
+      loadConfig();
+      bindEvents();
+      registerServiceWorker();
+      dom.passwordInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleLogin();
+      });
+      setTimeout(() => dom.passwordInput.focus(), 500);
+    }
+
+    function loadConfig() {
+      state.scriptUrl = localStorage.getItem(STORAGE_KEYS.scriptUrl) || '';
+      state.eventName = localStorage.getItem(STORAGE_KEYS.eventName) || '';
+      state.recentCheckins = JSON.parse(localStorage.getItem(STORAGE_KEYS.recentCheckins) || '[]');
+      if (state.eventName) {
+        dom.configEventName.value = state.eventName;
+        dom.headerEventName.textContent = state.eventName;
+      }
+      if (state.scriptUrl) {
+        dom.configScriptUrl.value = state.scriptUrl;
+      }
+    }
+
+    function registerServiceWorker() {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js')
+          .then(() => console.log('SW registered'))
+          .catch((err) => console.warn('SW failed:', err));
+      }
+    }
+
+    // ============================================
+    // EVENT BINDING
+    // ============================================
+    function bindEvents() {
+      dom.loginBtn.addEventListener('click', handleLogin);
+      dom.navItems.forEach(item => {
+        item.addEventListener('click', () => navigateTo(item.dataset.section));
+      });
+      dom.refreshBtn.addEventListener('click', refreshData);
+      dom.logoutBtn.addEventListener('click', handleLogout);
+      dom.startScanBtn.addEventListener('click', startScanner);
+      dom.stopScanBtn.addEventListener('click', stopScanner);
+      dom.qrFileInput.addEventListener('change', handleFileUpload);
+      dom.loadQrBtn.addEventListener('click', loadAndGenerateQRCodes);
+      dom.printQrBtn.addEventListener('click', () => window.print());
+      dom.qrSearchInput.addEventListener('input', filterQRCodes);
+      dom.saveConfigBtn.addEventListener('click', saveConfig);
+      dom.testConnectionBtn.addEventListener('click', testConnection);
+      dom.generateIdsBtn.addEventListener('click', generateIds);
+      dom.clearDataBtn.addEventListener('click', clearLocalData);
+      dom.modalCloseBtn.addEventListener('click', closeModal);
+      dom.modalDownloadBtn.addEventListener('click', downloadModalQR);
+      dom.qrModal.addEventListener('click', (e) => {
+        if (e.target === dom.qrModal) closeModal();
+      });
+    }
+
+    // ============================================
+    // AUTHENTICATION
+    // ============================================
+    function handleLogin() {
+      const password = dom.passwordInput.value.trim();
+      if (password === APP_PASSWORD) {
+        state.isAuthenticated = true;
+        dom.loginScreen.classList.add('hidden');
+        dom.app.classList.remove('hidden');
+        dom.loginError.classList.remove('visible');
+        if (state.scriptUrl) {
+          updateConnectionStatus(true);
+          refreshData();
+        }
+        showToast('Bem-vindo ao EventCheck! 🎓', 'success');
+      } else {
+        dom.loginError.classList.add('visible');
+        dom.passwordInput.value = '';
+        dom.passwordInput.focus();
+        dom.loginError.style.animation = 'none';
+        dom.loginError.offsetHeight;
+        dom.loginError.style.animation = '';
+      }
+    }
+
+    function handleLogout() {
+      state.isAuthenticated = false;
+      stopScanner();
+      dom.app.classList.add('hidden');
+      dom.loginScreen.classList.remove('hidden');
+      dom.passwordInput.value = '';
+      dom.passwordInput.focus();
+    }
+
+    // ============================================
+    // NAVIGATION
+    // ============================================
+    function navigateTo(sectionName) {
+      if (state.isScanning && sectionName !== 'scanner') stopScanner();
+      dom.navItems.forEach(item => {
+        item.classList.toggle('active', item.dataset.section === sectionName);
+      });
+      dom.sections.forEach(section => {
+        const isTarget = section.id === sectionName + '-section';
+        section.classList.toggle('active', isTarget);
+        if (isTarget) {
+          section.style.animation = 'none';
+          section.offsetHeight;
+          section.style.animation = '';
+        }
+      });
+    }
+
+    // ============================================
+    // API COMMUNICATION
+    // ============================================
+    async function apiGet(action) {
+      if (!state.scriptUrl) {
+        showToast('Configure a URL do Apps Script primeiro', 'warning');
+        throw new Error('No script URL');
+      }
+      const url = state.scriptUrl + '?action=' + action + '&password=' + encodeURIComponent(APP_PASSWORD) + '&t=' + Date.now();
+      const response = await fetch(url, { method: 'GET', redirect: 'follow' });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.json();
+    }
+
+    async function apiPost(data) {
+      if (!state.scriptUrl) {
+        showToast('Configure a URL do Apps Script primeiro', 'warning');
+        throw new Error('No script URL');
+      }
+      const response = await fetch(state.scriptUrl, {
+        method: 'POST',
+        mode: 'cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        redirect: 'follow',
+        body: JSON.stringify(Object.assign({}, data, { password: APP_PASSWORD }))
+      });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.json();
+    }
+
+    // ============================================
+    // DATA REFRESH
+    // ============================================
+    async function refreshData() {
+      if (!state.scriptUrl) {
+        showToast('Configure a URL do Apps Script nas configurações', 'warning');
+        navigateTo('config');
+        return;
+      }
+      try {
+        dom.refreshBtn.disabled = true;
+        dom.refreshBtn.textContent = '⏳';
+        const data = await apiGet('list');
+        if (data.status === 'success') {
+          state.participants = data.participants || [];
+          updateDashboard(data.stats);
+          updateConnectionStatus(true);
+          updateRecentList();
+          showToast('Dados atualizados com sucesso', 'success');
+        } else if (data.status === 'unauthorized') {
+          showToast('Senha do Apps Script incorreta', 'error');
+          updateConnectionStatus(false);
+        } else {
+          showToast(data.message || 'Erro ao carregar dados', 'error');
+        }
+      } catch (err) {
+        console.error('Refresh error:', err);
+        showToast('Erro de conexão. Verifique a URL e a internet.', 'error');
+        updateConnectionStatus(false);
+      } finally {
+        dom.refreshBtn.disabled = false;
+        dom.refreshBtn.textContent = '🔄';
+      }
+    }
+
+    // ============================================
+    // DASHBOARD
+    // ============================================
+    function updateDashboard(stats) {
+      if (!stats) return;
+      animateNumber(dom.statTotal, stats.total);
+      animateNumber(dom.statPresent, stats.present);
+      animateNumber(dom.statAbsent, stats.absent);
+      animateNumber(dom.statPercentage, stats.percentage, '%');
+    }
+
+    function animateNumber(element, target, suffix) {
+      suffix = suffix || '';
+      const current = parseInt(element.textContent) || 0;
+      const diff = target - current;
+      if (diff === 0) { element.textContent = target + suffix; return; }
+      const duration = 600, steps = 30, stepValue = diff / steps;
+      let step = 0;
+      const interval = setInterval(() => {
+        step++;
+        if (step >= steps) { element.textContent = target + suffix; clearInterval(interval); }
+        else { element.textContent = Math.round(current + stepValue * step) + suffix; }
+      }, duration / steps);
+    }
+
+    function updateRecentList() {
+      const presentParticipants = state.participants
+        .filter(p => p.status === 'present' && p.checkinDate)
+        .sort((a, b) => parseDate(b.checkinDate) - parseDate(a.checkinDate))
+        .slice(0, 20);
+
+      if (presentParticipants.length === 0) {
+        dom.emptyRecent.classList.remove('hidden');
+        dom.recentCount.textContent = '0 hoje';
+        dom.recentList.querySelectorAll('.recent-item').forEach(item => item.remove());
+        return;
+      }
+
+      dom.emptyRecent.classList.add('hidden');
+      dom.recentCount.textContent = presentParticipants.length + ' registrados';
+      dom.recentList.querySelectorAll('.recent-item').forEach(item => item.remove());
+
+      presentParticipants.forEach((p, index) => {
+        const item = document.createElement('div');
+        item.className = 'recent-item';
+        item.style.animationDelay = (index * 0.05) + 's';
+        item.innerHTML =
+          '<div class="check-icon">✅</div>' +
+          '<div class="item-info">' +
+          '<div class="item-name">' + escapeHtml(p.name) + '</div>' +
+          '<div class="item-time">' + (p.checkinDate || 'Horário não registrado') + '</div>' +
+          '</div>';
+        dom.recentList.appendChild(item);
+      });
+    }
+
+    function parseDate(dateStr) {
+      if (!dateStr) return 0;
+      const parts = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4})\s*(\d{2}):(\d{2}):?(\d{2})?/);
+      if (parts) return new Date(parts[3], parts[2] - 1, parts[1], parts[4], parts[5], parts[6] || 0).getTime();
+      return 0;
+    }
+
+    // ============================================
+    // QR CODE SCANNER
+    // ============================================
+    async function startScanner() {
+      try {
+        dom.startScanBtn.classList.add('hidden');
+        dom.stopScanBtn.classList.remove('hidden');
+        dom.scannerPlaceholder.classList.add('hidden');
+        dom.scannerViewport.classList.add('scanning');
+
+        state.scanner = new Html5Qrcode('scanner-view');
+
+        // Detect mobile for adaptive configuration
+        var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+
+        // Fixed qrbox size — avoids timing/calculation issues on mobile
+        var containerW = dom.scannerViewport.offsetWidth || Math.min(window.innerWidth, 400);
+        var qrboxSize = Math.max(200, Math.floor(containerW * 0.70));
+
+        var config = {
+          fps: isMobile ? 15 : 10,
+          qrbox: { width: qrboxSize, height: qrboxSize },
+          // aspectRatio: 1.0 removed — causes camera stream failures on mobile
+          disableFlip: false,
+          experimentalFeatures: {
+            // BarcodeDetector is unreliable on many Android devices
+            useBarCodeDetectorIfSupported: !isMobile
+          }
+        };
+
+        var started = await _startCameraWithFallback(config);
+        if (!started) throw new Error('Nenhuma câmera compatível encontrada.');
+
+        state.isScanning = true;
+        showToast('Scanner ativado. Aponte para um QR Code.', 'info');
+      } catch (err) {
+        console.error('Scanner error:', err);
+        resetScannerUI();
+        var msg = err.toString();
+        if (msg.indexOf('Permission') > -1 || msg.indexOf('NotAllowed') > -1) {
+          showToast('Permissão de câmera negada. Permita nas configurações do navegador.', 'error');
+        } else if (msg.indexOf('NotFound') > -1 || msg.indexOf('Devices') > -1) {
+          showToast('Nenhuma câmera encontrada. Use a opção de enviar imagem.', 'error');
+        } else {
+          showToast('Erro ao iniciar câmera: ' + msg, 'error');
+        }
+      }
+    }
+
+    // Three-tier camera start — returns true on success
+    async function _startCameraWithFallback(config) {
+      // Strategy 1: Exact environment camera
+      try {
+        await state.scanner.start(
+          { facingMode: { exact: 'environment' } },
+          config, onScanSuccess, function() {}
+        );
+        return true;
+      } catch (e1) { console.warn('Camera S1:', e1.message || e1); }
+
+      // Strategy 2: Non-exact environment
+      try {
+        await state.scanner.start(
+          { facingMode: 'environment' },
+          config, onScanSuccess, function() {}
+        );
+        return true;
+      } catch (e2) { console.warn('Camera S2:', e2.message || e2); }
+
+      // Strategy 3: Enumerate and pick rear camera by label
+      try {
+        var cameras = await Html5Qrcode.getCameras();
+        if (cameras && cameras.length > 0) {
+          var backCam = cameras.find(function(c) {
+            return /back|rear|trás|environment/i.test(c.label);
+          }) || cameras[cameras.length - 1];
+          await state.scanner.start(backCam.id, config, onScanSuccess, function() {});
+          return true;
+        }
+      } catch (e3) { console.warn('Camera S3:', e3.message || e3); }
+
+      return false;
+    }
+
+    async function stopScanner() {
+      if (state.scanner && state.isScanning) {
+        try { await state.scanner.stop(); state.scanner.clear(); } catch (e) {}
+      }
+      state.isScanning = false;
+      resetScannerUI();
+    }
+
+    function resetScannerUI() {
+      dom.startScanBtn.classList.remove('hidden');
+      dom.stopScanBtn.classList.add('hidden');
+      dom.scannerPlaceholder.classList.remove('hidden');
+      dom.scannerViewport.classList.remove('scanning');
+      state.isScanning = false;
+    }
+
+    async function onScanSuccess(decodedText) {
+      if (state.scanCooldown) return;
+      state.scanCooldown = true;
+      if (navigator.vibrate) navigator.vibrate(100);
+      playBeep(true);
+
+      try {
+        showScanResult('loading', '⏳', 'Verificando...', 'Consultando a planilha...');
+        const result = await apiPost({ action: 'checkin', id: decodedText.trim() });
+
+        if (result.status === 'success') {
+          showScanResult('success', '✅', result.name, result.message);
+          addToRecentCheckins(result.name);
+          playBeep(true);
+        } else if (result.status === 'already_checked_in') {
+          showScanResult('duplicate', '⚠️', result.name, result.message);
+          playBeep(false);
+        } else if (result.status === 'not_found') {
+          showScanResult('error', '❌', 'Não encontrado', result.message);
+          playBeep(false);
+        } else if (result.status === 'unauthorized') {
+          showScanResult('error', '🔒', 'Não autorizado', 'Senha do servidor incorreta');
+          playBeep(false);
+        } else {
+          showScanResult('error', '❌', 'Erro', result.message || 'Erro desconhecido');
+          playBeep(false);
+        }
+      } catch (err) {
+        console.error('Checkin error:', err);
+        showScanResult('error', '❌', 'Erro de conexão', 'Verifique a internet e a URL do script');
+        playBeep(false);
+      }
+
+      setTimeout(function() { state.scanCooldown = false; }, 2500);
+    }
+
+    function showScanResult(type, icon, name, message) {
+      dom.scanResult.className = 'scan-result visible ' + type;
+      dom.resultIcon.textContent = icon;
+      dom.resultName.textContent = name;
+      dom.resultMessage.textContent = message;
+      clearTimeout(state.resultTimeout);
+      state.resultTimeout = setTimeout(function() {
+        dom.scanResult.classList.remove('visible');
+      }, 4000);
+    }
+
+    function addToRecentCheckins(name) {
+      state.recentCheckins.unshift({
+        name: name,
+        time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      });
+      if (state.recentCheckins.length > 50) state.recentCheckins = state.recentCheckins.slice(0, 50);
+      localStorage.setItem(STORAGE_KEYS.recentCheckins, JSON.stringify(state.recentCheckins));
+      refreshData();
+    }
+
+    async function handleFileUpload(event) {
+      var file = event.target.files[0];
+      if (!file) return;
+      try {
+        var result = await Html5Qrcode.scanFile(file, true);
+        if (result) { await onScanSuccess(result); }
+        else { showToast('QR Code não encontrado na imagem', 'error'); }
+      } catch (err) {
+        console.error('File scan error:', err);
+        showToast('Não foi possível ler o QR Code da imagem', 'error');
+      }
+      event.target.value = '';
+    }
+
+    // ============================================
+    // QR CODE GENERATION
+    // ============================================
+    async function loadAndGenerateQRCodes() {
+      if (!state.scriptUrl) {
+        showToast('Configure a URL do Apps Script primeiro', 'warning');
+        navigateTo('config');
+        return;
+      }
+      showLoading('Carregando participantes...');
+      try {
+        var data = await apiGet('list');
+        if (data.status === 'success' && data.participants) {
+          state.participants = data.participants;
+          updateDashboard(data.stats);
+          generateQRCards(data.participants);
+          updateRecentList();
+          showToast(data.participants.length + ' participantes carregados', 'success');
+        } else {
+          showToast(data.message || 'Erro ao carregar', 'error');
+        }
+      } catch (err) {
+        console.error('Load error:', err);
+        showToast('Erro ao carregar participantes', 'error');
+      }
+      hideLoading();
+    }
+
+    function generateQRCards(participants) {
+      dom.qrGrid.innerHTML = '';
+      if (!participants || participants.length === 0) {
+        dom.qrGrid.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>Nenhum participante encontrado na planilha.</p></div>';
+        return;
+      }
+      var withId = participants.filter(function(p) { return p.id; });
+      if (withId.length === 0) {
+        dom.qrGrid.innerHTML = '<div class="empty-state"><div class="empty-icon">🔑</div><p>Participantes sem IDs. Vá em Config e clique em "Gerar IDs".</p></div>';
+        return;
+      }
+
+      withId.forEach(function(participant) {
+        var card = document.createElement('div');
+        card.className = 'qr-card' + (participant.status === 'present' ? ' checked-in' : '');
+        card.dataset.name = participant.name.toLowerCase();
+        card.dataset.email = (participant.email || '').toLowerCase();
+        card.dataset.id = participant.id;
+
+        var qrDiv = document.createElement('div');
+        qrDiv.className = 'qr-canvas-wrapper';
+        card.appendChild(qrDiv);
+
+        var nameEl = document.createElement('div');
+        nameEl.className = 'qr-name';
+        nameEl.textContent = participant.name;
+        card.appendChild(nameEl);
+
+        if (participant.email) {
+          var emailEl = document.createElement('div');
+          emailEl.className = 'qr-email';
+          emailEl.textContent = participant.email;
+          card.appendChild(emailEl);
+        }
+
+        try {
+          new QRCode(qrDiv, {
+            text: participant.id,
+            width: 140, height: 140,
+            colorDark: '#0a1628', colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.M
+          });
+        } catch (e) {
+          qrDiv.innerHTML = '<p style="padding:20px;font-size:0.75rem;color:var(--error)">Erro ao gerar QR</p>';
+        }
+
+        card.addEventListener('click', function() { openQRModal(participant); });
+        dom.qrGrid.appendChild(card);
+      });
+    }
+
+    function filterQRCodes() {
+      var query = dom.qrSearchInput.value.toLowerCase().trim();
+      dom.qrGrid.querySelectorAll('.qr-card').forEach(function(card) {
+        var name = card.dataset.name || '';
+        var email = card.dataset.email || '';
+        card.style.display = (name.indexOf(query) > -1 || email.indexOf(query) > -1) ? '' : 'none';
+      });
+    }
+
+    // ============================================
+    // QR MODAL
+    // ============================================
+    function openQRModal(participant) {
+      dom.modalName.textContent = participant.name;
+      dom.modalEmail.textContent = participant.email || participant.institution || '';
+      dom.modalQrContainer.innerHTML = '';
+      try {
+        new QRCode(dom.modalQrContainer, {
+          text: participant.id,
+          width: 250, height: 250,
+          colorDark: '#0a1628', colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      } catch (e) {
+        dom.modalQrContainer.innerHTML = '<p style="color:var(--error)">Erro ao gerar QR Code</p>';
+      }
+      dom.qrModal.dataset.participantName = participant.name;
+      dom.qrModal.classList.remove('hidden');
+    }
+
+    function closeModal() { dom.qrModal.classList.add('hidden'); }
+
+    function downloadModalQR() {
+      var canvas = dom.modalQrContainer.querySelector('canvas');
+      if (!canvas) { showToast('QR Code não disponível', 'error'); return; }
+      var name = dom.qrModal.dataset.participantName || 'qrcode';
+      var link = document.createElement('a');
+      link.download = 'QR_' + name.replace(/\s+/g, '_') + '.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      showToast('QR Code baixado com sucesso', 'success');
+    }
+
+    // ============================================
+    // CONFIGURATION
+    // ============================================
+    function saveConfig() {
+      var eventName = dom.configEventName.value.trim();
+      var scriptUrl = dom.configScriptUrl.value.trim();
+      if (!scriptUrl) { showToast('Preencha a URL do Google Apps Script', 'warning'); return; }
+      if (scriptUrl.indexOf('script.google.com') === -1) { showToast('URL inválida. Deve ser do Google Apps Script.', 'error'); return; }
+      state.eventName = eventName;
+      state.scriptUrl = scriptUrl;
+      localStorage.setItem(STORAGE_KEYS.eventName, eventName);
+      localStorage.setItem(STORAGE_KEYS.scriptUrl, scriptUrl);
+      dom.headerEventName.textContent = eventName || 'EventCheck';
+      showToast('Configurações salvas com sucesso! ✅', 'success');
+    }
+
+    async function testConnection() {
+      if (!state.scriptUrl) { showToast('Salve a URL do script primeiro', 'warning'); return; }
+      dom.testConnectionBtn.disabled = true;
+      dom.testConnectionBtn.innerHTML = '<span class="spinner"></span> Testando...';
+      try {
+        var data = await apiGet('stats');
+        if (data.status === 'success') {
+          dom.connectionStatus.classList.remove('hidden', 'fail');
+          dom.connectionStatus.classList.add('ok');
+          dom.connectionIcon.textContent = '✅';
+          dom.connectionText.textContent = 'Conectado! ' + data.stats.total + ' participantes.';
+          updateConnectionStatus(true);
+          updateDashboard(data.stats);
+          showToast('Conexão bem-sucedida!', 'success');
+        } else if (data.status === 'unauthorized') {
+          dom.connectionStatus.classList.remove('hidden', 'ok');
+          dom.connectionStatus.classList.add('fail');
+          dom.connectionIcon.textContent = '🔒';
+          dom.connectionText.textContent = 'Senha do Apps Script não confere.';
+          updateConnectionStatus(false);
+        } else { throw new Error(data.message); }
+      } catch (err) {
+        dom.connectionStatus.classList.remove('hidden', 'ok');
+        dom.connectionStatus.classList.add('fail');
+        dom.connectionIcon.textContent = '❌';
+        dom.connectionText.textContent = 'Falha: ' + err.message;
+        updateConnectionStatus(false);
+      }
+      dom.testConnectionBtn.disabled = false;
+      dom.testConnectionBtn.textContent = '🔗 Testar';
+    }
+
+    function updateConnectionStatus(connected) {
+      dom.statusDot.className = 'status-dot' + (connected ? ' connected' : '');
+      dom.statusText.textContent = connected ? 'Conectado' : 'Desconectado';
+    }
+
+    async function generateIds() {
+      if (!state.scriptUrl) { showToast('Configure a URL primeiro', 'warning'); return; }
+      dom.generateIdsBtn.disabled = true;
+      dom.generateIdsBtn.innerHTML = '<span class="spinner"></span> Gerando...';
+      try {
+        var result = await apiPost({ action: 'generate_ids' });
+        if (result.status === 'success') { showToast(result.count + ' IDs gerados! 🔑', 'success'); }
+        else { showToast(result.message || 'Erro', 'error'); }
+      } catch (err) { showToast('Erro: ' + err.message, 'error'); }
+      dom.generateIdsBtn.disabled = false;
+      dom.generateIdsBtn.textContent = '🔑 Gerar IDs para Participantes sem ID';
+    }
+
+    function clearLocalData() {
+      if (confirm('Limpar todos os dados locais? (Configurações serão mantidas)')) {
+        state.recentCheckins = [];
+        state.participants = [];
+        localStorage.removeItem(STORAGE_KEYS.recentCheckins);
+        localStorage.removeItem(STORAGE_KEYS.participants);
+        dom.statTotal.textContent = '—';
+        dom.statPresent.textContent = '—';
+        dom.statAbsent.textContent = '—';
+        dom.statPercentage.textContent = '—';
+        updateRecentList();
+        dom.qrGrid.innerHTML = '<div class="empty-state"><div class="empty-icon">📱</div><p>Carregue os participantes da planilha para gerar os QR Codes.</p></div>';
+        showToast('Dados locais limpos', 'success');
+      }
+    }
+
+    // ============================================
+    // AUDIO FEEDBACK
+    // ============================================
+    function playBeep(success) {
+      try {
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        if (success) {
+          osc.frequency.setValueAtTime(587, ctx.currentTime);
+          osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
+          gain.gain.setValueAtTime(0.15, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + 0.25);
+        } else {
+          osc.frequency.setValueAtTime(330, ctx.currentTime);
+          osc.frequency.setValueAtTime(220, ctx.currentTime + 0.15);
+          gain.gain.setValueAtTime(0.12, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + 0.3);
+        }
+      } catch (e) {}
+    }
+
+    // ============================================
+    // UI HELPERS
+    // ============================================
+    function showToast(message, type) {
+      type = type || 'info';
+      var toast = document.createElement('div');
+      toast.className = 'toast ' + type;
+      var icons = { info: 'ℹ️', success: '✅', error: '❌', warning: '⚠️' };
+      toast.innerHTML = '<span>' + (icons[type] || '') + '</span><span>' + escapeHtml(message) + '</span>';
+      dom.toastContainer.appendChild(toast);
+      setTimeout(function() {
+        toast.classList.add('removing');
+        setTimeout(function() { toast.remove(); }, 300);
+      }, 3500);
+    }
+
+    function showLoading(text) {
+      dom.loadingText.textContent = text || 'Carregando...';
+      dom.loadingOverlay.classList.remove('hidden');
+    }
+
+    function hideLoading() { dom.loadingOverlay.classList.add('hidden'); }
+
+    function escapeHtml(text) {
+      var div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ============================================
+    // LAUNCH
+    // ============================================
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
+  </script>
 </body>
 </html>
